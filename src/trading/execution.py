@@ -1,5 +1,6 @@
 from .exchange import BaseExchange
 from typing import Any
+import json
 
 
 class ExecutionEngine:
@@ -9,4 +10,7 @@ class ExecutionEngine:
         self.api = api
 
     async def place_order(self, signal: Any) -> dict:
-        return await self.api.place_order(signal.symbol, signal.side, signal.quantity)
+        resp = await self.api.place_order(signal.symbol, signal.side, signal.quantity)
+        with open("orders.log", "a") as f:
+            f.write(json.dumps({"symbol": signal.symbol, "side": signal.side, "qty": signal.quantity, "resp": resp}) + "\n")
+        return resp

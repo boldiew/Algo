@@ -9,3 +9,5 @@ uvicorn
 aiohttp
 pydantic
 pytest
+openai
+faiss-cpu

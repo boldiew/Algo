@@ -1,4 +1,5 @@
 from typing import List
+import json
 from math import exp
 from .agents.base import AgentResult, BaseAgent
 
@@ -16,6 +17,20 @@ def compute_weights(agents: List[BaseAgent], window: int = 20) -> List[float]:
     return weights
 
 
+def _debate(results: List[AgentResult], weights: List[float]) -> AgentResult:
+    transcript = [f"{r.direction}:{r.edge:.2f}:{';'.join(r.evidence)}" for r in results]
+    long_w = sum(w for r, w in zip(results, weights) if r.direction == "LONG")
+    short_w = sum(w for r, w in zip(results, weights) if r.direction == "SHORT")
+    if long_w == short_w:
+        direction = "FLAT"
+    else:
+        direction = "LONG" if long_w > short_w else "SHORT"
+    edge = abs(long_w - short_w) / sum(weights)
+    with open("debate.log", "a") as f:
+        f.write(json.dumps({"ts": results[0].ts.isoformat(), "transcript": transcript, "decision": direction, "edge": edge}) + "\n")
+    return AgentResult(ts=results[0].ts, symbol=results[0].symbol, direction=direction, edge=edge, expected_rr=1+edge, evidence=transcript)
+
+
 def weighted_consensus(results: List[AgentResult], weights: List[float] | None = None) -> AgentResult:
     if not results:
         raise ValueError("No agent results")
@@ -31,7 +46,7 @@ def weighted_consensus(results: List[AgentResult], weights: List[float] | None =
     ordered = sorted(directions.items(), key=lambda x: x[1], reverse=True)
     direction = ordered[0][0]
     if len(ordered) > 1 and ordered[1][1] > 0.4 * total_w:
-        direction = "FLAT"
+        return _debate(results, weights)
     return AgentResult(
         ts=results[0].ts,
         symbol=results[0].symbol,
