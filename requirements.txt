@@ -1,0 +1,11 @@
+python-dotenv
+PyYAML
+websockets
+pandas
+numpy
+fastapi
+uvicorn
+
+aiohttp
+pydantic
+pytest
