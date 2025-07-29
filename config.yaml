@@ -1,0 +1,9 @@
+risk:
+  daily_stop: -0.02
+  intraday_stop: -0.03
+  max_pair_exposure: 1.0
+  max_corr_exposure: 1.5
+  liquidation_buffer: 0.1
+  equity: 1.0
+pairs:
+  - BTC-USDT
