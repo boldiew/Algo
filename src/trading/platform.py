@@ -2,7 +2,7 @@ import os
 import asyncio
 from datetime import datetime
 from .config import Config
-from .ingestion import KucoinDataStream
+from .ingestion import KucoinDataStream, HistoricalDataStream
 from .agents.sentiment import SentimentAgent
 from .agents.technical import TechnicalAgent
 from .agents.fundamentals import FundamentalsAgent
@@ -13,19 +13,32 @@ from .regime import MarketRegimeClassifier
 from .strategies import STRATEGY_MAP
 from .risk import RiskEngine
 from .execution import ExecutionEngine
-from .exchange import KucoinClient
+from .exchange import KucoinClient, SimulatedExchange
 from .state import StateStore
 
 
 class TradingPlatform:
     def __init__(self, config: Config):
         self.config = config
-        self.client = KucoinClient(
-            api_key=os.getenv("KUCOIN_API_KEY", ""),
-            secret=os.getenv("KUCOIN_SECRET", ""),
-            passphrase=os.getenv("KUCOIN_PASSPHRASE", ""),
-        )
-        self.stream = KucoinDataStream(self.client, config.pairs)
+        self.mode = config.mode
+        if self.mode == "live":
+            data_client = KucoinClient(**config.kucoin)
+            trade_client = data_client
+        elif self.mode == "paper":
+            data_client = KucoinClient(**config.kucoin)
+            trade_client = SimulatedExchange()
+        else:  # backtest
+            data_client = None
+            trade_client = SimulatedExchange()
+
+        self.client = trade_client
+
+        if self.mode == "backtest":
+            if not config.backtest_path:
+                raise ValueError("backtest_path required for backtest mode")
+            self.stream = HistoricalDataStream(config.backtest_path, config.pairs)
+        else:
+            self.stream = KucoinDataStream(data_client, config.pairs)
         self.state = StateStore()
         self.agents = [
             SentimentAgent(),

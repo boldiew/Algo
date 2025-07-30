@@ -1,6 +1,7 @@
 import asyncio
 import json
 import websockets
+import pandas as pd
 from typing import AsyncIterator, List
 from .exchange import KucoinClient
 from .features import FeatureFabric
@@ -44,3 +45,21 @@ class KucoinDataStream:
             if data.get("type") == "message":
                 features = self.features.update(data["data"])
                 yield features
+
+
+class HistoricalDataStream:
+    """Replay historical ticks from a CSV file."""
+
+    def __init__(self, path: str, symbols: List[str]):
+        self.path = path
+        self.symbols = symbols
+        self.features = FeatureFabric()
+
+    async def stream(self) -> AsyncIterator[dict]:
+        df = pd.read_csv(self.path)
+        for _, row in df.iterrows():
+            record = row.to_dict()
+            record.setdefault("symbol", self.symbols[0] if self.symbols else "")
+            features = self.features.update(record)
+            yield features
+            await asyncio.sleep(0)
