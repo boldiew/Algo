@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime
+from collections import deque
 from scipy.stats import entropy
 
 
@@ -23,6 +24,14 @@ class FeatureFabric:
         self.last_ts = None
         self.vol_window = vol_window
         self.surf_windows = [10, 30, 60]
+        self.funding_rates: deque[float] = deque(maxlen=200)
+
+    def _funding_z(self, rate: float) -> float:
+        self.funding_rates.append(rate)
+        arr = np.array(self.funding_rates, dtype=float)
+        mean = arr.mean()
+        std = arr.std() + 1e-9
+        return float((rate - mean) / std)
 
     def update(self, tick: dict) -> dict:
         ts = pd.to_datetime(tick.get("ts") or tick.get("time"), unit="ms", utc=True)
@@ -72,4 +81,12 @@ class FeatureFabric:
         depth = float(tick.get("bestBidSize", 0)) + float(tick.get("bestAskSize", 0))
         features["depth_mid"] = ob_mid
         features["depth"] = depth
+        if "funding_rate" in tick:
+            rate = float(tick["funding_rate"])
+            features["funding_rate"] = rate
+            features["funding_z"] = self._funding_z(rate)
+        if "fg_score" in tick:
+            features["fg_score"] = float(tick["fg_score"])
+        if "social_trend" in tick:
+            features["social_trend"] = float(tick["social_trend"])
         return features

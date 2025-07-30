@@ -24,6 +24,16 @@ class KucoinClient(BaseExchange):
                 data = await resp.json()
                 return data["data"]["token"]
 
+    async def get_funding_rate(self, symbol: str) -> float:
+        url = f"{self.base_url}/api/v1/funding-rate/{symbol}/current"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                data = await resp.json()
+                try:
+                    return float(data["data"]["value"])
+                except Exception:
+                    return 0.0
+
     async def place_order(self, symbol: str, side: str, size: float, price: Optional[float] = None) -> dict:
         url = f"{self.base_url}/api/v1/orders"
         payload = {

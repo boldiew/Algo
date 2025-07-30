@@ -2,6 +2,8 @@ import asyncio
 import json
 import websockets
 from typing import AsyncIterator, List
+from datetime import datetime, timedelta
+import aiohttp
 from .exchange import KucoinClient
 from .features import FeatureFabric
 
@@ -17,6 +19,30 @@ class KucoinDataStream:
         self.ws = None
         self._token = None
         self.features = FeatureFabric()
+        self._sentiment = {"fg_score": 0.5, "social_trend": 0.0}
+        self._sentiment_ts = datetime.utcnow() - timedelta(minutes=15)
+
+    async def _update_sentiment(self):
+        try:
+            async with aiohttp.ClientSession() as session:
+                resp = await session.get("https://api.alternative.me/fng/")
+                data = await resp.json()
+                val = float(data["data"][0]["value"])
+                self._sentiment["fg_score"] = val / 100.0
+                resp = await session.get("https://api.coingecko.com/api/v3/search/trending")
+                data = await resp.json()
+                coins = [c["item"]["symbol"].upper() for c in data.get("coins", [])]
+                base = self.symbols[0].split("-")[0].upper()
+                self._sentiment["social_trend"] = 1.0 if base in coins else 0.0
+        except Exception:
+            pass
+
+    async def _get_funding(self, symbol: str) -> float:
+        try:
+            data = await self.client.get_funding_rate(symbol)
+            return float(data)
+        except Exception:
+            return 0.0
 
     async def _ensure_token(self):
         if self._token is None:
@@ -42,5 +68,13 @@ class KucoinDataStream:
         async for msg in self.ws:
             data = json.loads(msg)
             if data.get("type") == "message":
-                features = self.features.update(data["data"])
+                tick = data["data"]
+                funding = await self._get_funding(tick.get("symbol", ""))
+                tick["funding_rate"] = funding
+                now = datetime.utcnow()
+                if now - self._sentiment_ts > timedelta(minutes=10):
+                    await self._update_sentiment()
+                    self._sentiment_ts = now
+                tick.update(self._sentiment)
+                features = self.features.update(tick)
                 yield features
