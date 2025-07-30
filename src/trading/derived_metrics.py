@@ -68,6 +68,9 @@ class DerivedMetrics:
         market_cap = float(oi.get("marketCap", 0.0))
 
         base_cols = [
+            "Open",
+            "High",
+            "Low",
             "LastPrice",
             "SpotPrice",
             "FundingRate",
@@ -87,6 +90,9 @@ class DerivedMetrics:
             prev_num = df["VWAP_numerator"].iloc[-1] if len(df) else 0.0
             prev_vol = df["Volume"].iloc[-1] if len(df) else 0.0
             prev_cvd = df["CVD"].iloc[-1] if len(df) else 0.0
+            df.loc[ts, "Open"] = price
+            df.loc[ts, "High"] = price
+            df.loc[ts, "Low"] = price
             df.loc[ts, "VWAP_numerator"] = prev_num
             df.loc[ts, "Volume"] = prev_vol
             df.loc[ts, "CVD"] = prev_cvd
@@ -95,6 +101,10 @@ class DerivedMetrics:
             df.loc[ts, "LiquidationClusterDensity"] = 0.0
 
         df.loc[ts, "LastPrice"] = price
+        if ts in df.index:
+            df.loc[ts, "High"] = max(df.loc[ts, "High"], price)
+            df.loc[ts, "Low"] = min(df.loc[ts, "Low"], price)
+        df.loc[ts, "Open"] = df.loc[ts, "Open"] if pd.notna(df.loc[ts, "Open"]) else price
         df.loc[ts, "SpotPrice"] = spot_price
         df.loc[ts, "FundingRate"] = funding_rate
         df.loc[ts, "OpenInterest"] = open_interest
@@ -161,6 +171,78 @@ class DerivedMetrics:
         sharpe_24h = (df["Return"].rolling(60 * 24).mean()) / (df["Return"].rolling(60 * 24).std() + 1e-9)
         momentum = np.sign(df["Return"].rolling(60).sum())
         df["MomentumScore"] = sharpe_24h * momentum
+
+        ma20 = df["LastPrice"].rolling(20).mean()
+        std20 = df["LastPrice"].rolling(20).std()
+        upper = ma20 + 2 * std20
+        lower = ma20 - 2 * std20
+        df["BollingerBandwidth"] = (upper - lower) / (ma20 + 1e-9)
+
+        ema20 = df["LastPrice"].ewm(span=20, adjust=False).mean()
+        high_low = df["High"] - df["Low"]
+        tr1 = high_low
+        tr2 = (df["High"] - df["LastPrice"].shift(1)).abs()
+        tr3 = (df["Low"] - df["LastPrice"].shift(1)).abs()
+        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        atr14 = tr.rolling(14).mean()
+        df["ATRBandsWidth"] = (2 * atr14) / (df["LastPrice"] + 1e-9)
+        df["KeltnerChannelWidth"] = (4 * atr14) / (ema20 + 1e-9)
+
+        df["CumulativeFunding"] = df["FundingRate"].cumsum()
+        df["CumulativeFundingAbsolute"] = df["FundingRate"].abs().cumsum()
+        df["FundingVolatility"] = df["FundingRate"].rolling(60 * 24).std()
+
+        delta = df["LastPrice"].diff()
+        up = delta.clip(lower=0)
+        down = -delta.clip(upper=0)
+        roll_up = up.rolling(14).mean()
+        roll_down = down.rolling(14).mean()
+        rs = roll_up / (roll_down + 1e-9)
+        rsi = 100 - 100 / (1 + rs)
+        df["RSI"] = rsi
+
+        min_rsi = rsi.rolling(14).min()
+        max_rsi = rsi.rolling(14).max()
+        df["StochasticRSI"] = (rsi - min_rsi) / (max_rsi - min_rsi + 1e-9)
+
+        direction = np.sign(delta.fillna(0))
+        df["OBV"] = (direction * df["Volume"]).cumsum()
+
+        ema1 = df["LastPrice"].ewm(span=9, adjust=False).mean()
+        ema2 = ema1.ewm(span=9, adjust=False).mean()
+        ema3 = ema2.ewm(span=9, adjust=False).mean()
+        df["TRIX"] = ema3.pct_change() * 100
+
+        mf_mul = ((df["LastPrice"] - df["Low"]) - (df["High"] - df["LastPrice"])) / (df["High"] - df["Low"] + 1e-9)
+        mf_vol = mf_mul * df["Volume"]
+        df["ChaikinMoneyFlow"] = mf_vol.rolling(20).sum() / df["Volume"].rolling(20).sum().replace(0, np.nan)
+
+        typical_price = (df["High"] + df["Low"] + df["LastPrice"]) / 3
+        money_flow = typical_price * df["Volume"]
+        pos_mf = money_flow.where(typical_price > typical_price.shift(1), 0.0)
+        neg_mf = money_flow.where(typical_price < typical_price.shift(1), 0.0)
+        mf_ratio = pos_mf.rolling(14).sum() / (neg_mf.rolling(14).sum().abs() + 1e-9)
+        df["MoneyFlowIndex"] = 100 - (100 / (1 + mf_ratio))
+
+        span_10d = 60 * 24 * 10
+        span_20d = 60 * 24 * 20
+        df["HV10d"] = df["Return"].rolling(span_10d).std() * np.sqrt(span_10d)
+        df["HV20d"] = df["Return"].rolling(span_20d).std() * np.sqrt(span_20d)
+        wins = df["Return"].rolling(60).apply(lambda x: np.sum(x > 0), raw=True)
+        losses = df["Return"].rolling(60).apply(lambda x: np.sum(x < 0), raw=True)
+        df["WinLossRatio"] = wins / (losses + 1e-9)
+        df["RollingSharpeRatio"] = (
+            df["Return"].rolling(60 * 24).mean()
+            / (df["Return"].rolling(60 * 24).std() + 1e-9)
+        )
+        downside = df["Return"].rolling(60 * 24).apply(
+            lambda x: np.sqrt(np.mean(np.square(np.minimum(0, x)))), raw=True
+        )
+        df["RollingSortinoRatio"] = (
+            df["Return"].rolling(60 * 24).mean() / (downside + 1e-9)
+        )
+        drawdown = (df["LastPrice"] / df["LastPrice"].cummax()) - 1
+        df["UlcerIndex"] = np.sqrt((drawdown.pow(2)).rolling(14).mean())
 
         self.tables[symbol] = df
         self._persist(symbol)
