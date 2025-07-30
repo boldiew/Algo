@@ -12,3 +12,4 @@ pydantic
 pytest
 openai
 faiss-cpu
+nltk
