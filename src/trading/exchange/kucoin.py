@@ -18,11 +18,15 @@ class KucoinClient(BaseExchange):
         self.base_url = base_url.rstrip("/")
 
     async def get_ws_token(self) -> str:
+        """Retrieve websocket token for public market streams."""
         url = f"{self.base_url}/api/v1/bullet-public"
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url) as resp:
-                data = await resp.json()
-                return data["data"]["token"]
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url) as resp:
+                    data = await resp.json()
+                    return data["data"]["token"]
+        except aiohttp.ClientError as exc:
+            raise ConnectionError(f"Failed to obtain KuCoin token: {exc}") from exc
 
     async def place_order(self, symbol: str, side: str, size: float, price: Optional[float] = None) -> dict:
         url = f"{self.base_url}/api/v1/orders"

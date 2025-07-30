@@ -12,7 +12,7 @@ conda activate algo
 ## Running
 
 ```bash
-python -m src.run --mode=backtest
+PYTHONPATH=src python -m trading.main --mode backtest
 ```
 
 ## Tests
