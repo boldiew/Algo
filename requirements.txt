@@ -1,0 +1,14 @@
+python-dotenv
+PyYAML
+websockets
+pandas
+numpy
+scipy
+fastapi
+uvicorn
+
+aiohttp
+pydantic
+pytest
+openai
+faiss-cpu
