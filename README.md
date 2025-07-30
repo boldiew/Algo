@@ -37,7 +37,7 @@ pytest
    ```
 5. Start the dashboard in a separate terminal:
    ```bash
-   uvicorn trading.dashboard:app --port 8000
+   PYTHONPATH=src uvicorn trading.dashboard:app --port 8000
    ```
    Navigate to `http://localhost:8000` to monitor PnL, active trades and agent status in real time.
 
