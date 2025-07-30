@@ -7,3 +7,4 @@ risk:
   equity: 1.0
 pairs:
   - BTC-USDT
+data_path: data/btc_ticks.csv
