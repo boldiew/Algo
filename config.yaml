@@ -1,0 +1,6 @@
+mode: backtest
+kucoin:
+  base_url: https://api-futures.kucoin.com
+  key: ${KUCOIN_API_KEY}
+  secret: ${KUCOIN_API_SECRET}
+  passphrase: ${KUCOIN_API_PASSPHRASE}
