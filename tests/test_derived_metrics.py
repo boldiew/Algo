@@ -24,3 +24,5 @@ def test_basic_metrics():
     assert abs(last.VWAP - 101.0) < 1e-6
     assert abs(last.AnnualizedFunding - 0.0002 * 3 * 365) < 1e-9
     assert "MomentumScore" in df.columns
+    for key in ["RSI", "BollingerBandwidth", "ChaikinMoneyFlow", "AggressorVolumeDelta", "DepthAt0_1pct", "BidAskSpread", "TWAPDeviation"]:
+        assert key in df.columns
