@@ -1,6 +1,3 @@
-mode: backtest
-symbols: ["BTCUSDTM"]
-=======
 risk:
   daily_stop: -0.02
   intraday_stop: -0.03

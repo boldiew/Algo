@@ -1,7 +1,6 @@
+# Algo Trading Platform
 
-# Algo Trading System
-
-This repository implements a multi-agent cryptocurrency trading framework with real-time data ingestion from KuCoin Futures. The system computes advanced features using a unified event-time index and prepares inputs for AI-based strategy agents.
+This repository implements a robust and extensible cryptocurrency futures trading system. It integrates live market data ingestion, multiple AI-driven analysis agents, adaptive regime classification and strategy selection, dynamic risk controls and automated order execution. Derived metrics include OHLCV deltas, realised volatility surfaces, return entropy and the Hurst exponent. State is checkpointed to `state.json` so the system can resume after interruptions. A FastAPI dashboard exposes real-time PnL and agent weights.
 
 ## Setup
 
@@ -12,19 +11,16 @@ conda activate algo
 
 ## Running
 
-```
+```bash
 python -m src.run --mode=backtest
 ```
 
 ## Tests
 
-```
+```bash
 flake8 .
 pytest
-=======
-# Algo Trading Platform
-
-This repository contains a robust and extensible cryptocurrency futures trading system. It integrates live market data ingestion, multiple AI-driven analysis agents, adaptive regime classification and strategy selection, dynamic risk controls and automated order execution. Agent performance is tracked so their influence on trading decisions adjusts automatically over time. Derived metrics include OHLCV deltas, realised volatility surfaces, return entropy and the Hurst exponent. State is checkpointed to `state.json` so the system can resume after interruptions. A FastAPI dashboard exposes real-time PnL and agent weights.
+```
 
 ## Quick Start
 1. Copy `.env.example` to `.env` and provide your KuCoin API credentials. For LLM providers you can list multiple keys comma separated using variables like `OPENAI_API_KEYS`.
@@ -54,3 +50,4 @@ This repository contains a robust and extensible cryptocurrency futures trading 
 Run all unit tests with:
 ```bash
 pytest -q tests
+```
