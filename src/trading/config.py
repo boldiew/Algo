@@ -13,12 +13,22 @@ class Config:
     kucoin: dict
 
 
-def load_config(config_path: str = "config.yaml") -> Config:
-    """Load configuration from YAML and environment variables."""
+def load_config(config_path: str | None = None) -> Config:
+    """Load configuration from YAML and environment variables.
+
+    The config path can be provided as an argument or via the ``CONFIG_PATH``
+    environment variable. If the file is not found relative to the current
+    working directory, the loader also checks the repository root so the
+    application can be executed from any location.
+    """
     load_dotenv()
-    path = Path(config_path)
+    path = Path(config_path or os.getenv("CONFIG_PATH", "config.yaml"))
     if not path.exists():
-        raise FileNotFoundError(f"Config file {config_path} missing")
+        repo_path = Path(__file__).resolve().parents[2] / path.name
+        if repo_path.exists():
+            path = repo_path
+        else:
+            raise FileNotFoundError(f"Config file {path} missing")
     data = yaml.safe_load(path.read_text())
     mode = os.getenv("MODE", "backtest")
     kucoin = {
