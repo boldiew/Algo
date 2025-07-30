@@ -10,7 +10,15 @@ class StateStore:
 
     def __init__(self, path: str = "state.json"):
         self.path = path
-        self.state = {"agents": {}, "weights": {}, "exposures": {}, "day_pnl": 0.0, "intraday_pnl": 0.0}
+        self.state = {
+            "agents": {},
+            "weights": {},
+            "exposures": {},
+            "day_pnl": 0.0,
+            "intraday_pnl": 0.0,
+            "open_trades": [],
+            "trade_log": [],
+        }
         self.load()
 
     def load(self):
@@ -53,3 +61,15 @@ class StateStore:
     def store_pnl(self, day: float, intraday: float):
         self.state["day_pnl"] = day
         self.state["intraday_pnl"] = intraday
+
+    def load_open_trades(self) -> List[dict]:
+        return self.state.get("open_trades", [])
+
+    def store_open_trades(self, trades: List[dict]):
+        self.state["open_trades"] = trades
+
+    def load_trade_log(self) -> List[dict]:
+        return self.state.get("trade_log", [])
+
+    def store_trade_log(self, log: List[dict]):
+        self.state["trade_log"] = log

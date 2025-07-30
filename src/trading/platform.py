@@ -48,6 +48,8 @@ class TradingPlatform:
         pnl = self.state.load_pnl()
         self.risk.day_pnl = pnl["day"]
         self.risk.intraday_pnl = pnl["intraday"]
+        self.open_trades = self.state.load_open_trades()
+        self.trade_log = self.state.load_trade_log()
         self.execution = ExecutionEngine(self.client)
         self.last_optimisation_day = None
 
@@ -74,6 +76,14 @@ class TradingPlatform:
         trade_signal.quantity *= (consensus.edge ** 2)
         if self.risk.allows_trade(trade_signal.symbol, trade_signal.quantity):
             await self.execution.place_order(trade_signal)
+            fill = {
+                "ts": datetime.utcnow().isoformat(),
+                "symbol": trade_signal.symbol,
+                "side": trade_signal.side,
+                "qty": trade_signal.quantity,
+            }
+            self.trade_log.append(fill)
+            self.open_trades.append(fill)
             self.risk.record_fill(trade_signal.symbol, trade_signal.quantity, 0.0)
         else:
             print("Risk limits hit, trading paused")
@@ -81,6 +91,8 @@ class TradingPlatform:
             self.state.store_agent_history(agent.name, agent.history)
         self.state.store_weights({a.name: a.weight for a in self.agents})
         self.state.store_exposures(self.risk.exposures)
+        self.state.store_open_trades(self.open_trades)
+        self.state.store_trade_log(self.trade_log)
         self.state.store_pnl(self.risk.day_pnl, self.risk.intraday_pnl)
         self.state.save()
 
