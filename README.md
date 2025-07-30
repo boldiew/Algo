@@ -12,7 +12,13 @@ conda activate algo
 ## Running
 
 ```bash
-python -m src.run --mode=backtest
+PYTHONPATH=src python -m trading.main --mode backtest
+```
+If you run the application from another directory, set `CONFIG_PATH` to the
+location of your `config.yaml` so the loader can find it. In backtest mode the
+platform replays ticks from the `data_path` defined in `config.yaml`:
+```bash
+CONFIG_PATH=/path/to/config.yaml PYTHONPATH=src python -m trading.main --mode backtest
 ```
 
 ## Tests

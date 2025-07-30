@@ -1,7 +1,8 @@
 from .base import BaseAgent, AgentResult
 from datetime import datetime
 from typing import Dict
-from ..llm import chat
+from ..llm import chat, LLMError
+import logging
 
 class SentimentAgent(BaseAgent):
     name = "Sentiment"
@@ -12,8 +13,19 @@ class SentimentAgent(BaseAgent):
             "provide a trading direction (LONG, SHORT, FLAT) and confidence score between 0 and 1. "
             f"Current return: {market_slice.get('return', 0):.5f}."
         )
-        resp = await chat(messages=[{"role": "user", "content": prompt}], model="gpt-3.5-turbo")
-        content = resp.choices[0].message.content.strip().upper()
+        try:
+            resp = await chat(messages=[{"role": "user", "content": prompt}], model="gpt-3.5-turbo")
+            content = resp.choices[0].message.content.strip().upper()
+        except LLMError as exc:
+            logging.error("Sentiment LLM failure: %s", exc)
+            return AgentResult(
+                ts=datetime.utcnow(),
+                symbol=market_slice.get("symbol", ""),
+                direction="FLAT",
+                edge=0.0,
+                expected_rr=1.0,
+                evidence=[str(exc)],
+            )
         direction = "FLAT"
         edge = 0.5
         if "LONG" in content:

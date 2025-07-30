@@ -2,7 +2,7 @@ import os
 import asyncio
 from datetime import datetime
 from .config import Config
-from .ingestion import KucoinDataStream
+from .ingestion import KucoinDataStream, HistoricalDataStream
 from .agents.sentiment import SentimentAgent
 from .agents.technical import TechnicalAgent
 from .agents.fundamentals import FundamentalsAgent
@@ -25,7 +25,10 @@ class TradingPlatform:
             secret=os.getenv("KUCOIN_SECRET", ""),
             passphrase=os.getenv("KUCOIN_PASSPHRASE", ""),
         )
-        self.stream = KucoinDataStream(self.client, config.pairs)
+        if config.mode == "backtest" and hasattr(config, "data_path"):
+            self.stream = HistoricalDataStream(config.data_path)
+        else:
+            self.stream = KucoinDataStream(self.client, config.pairs)
         self.state = StateStore()
         self.agents = [
             SentimentAgent(),
