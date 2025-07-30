@@ -1,3 +1,4 @@
+
 # Algo Trading Platform
 
 This repository contains a lightweight but extensible cryptocurrency futures trading system. It integrates live market data ingestion, multiple AI-driven analysis agents, adaptive regime classification and strategy selection, dynamic risk controls and automated order execution. Agent performance is tracked so their influence on trading decisions adjusts automatically over time.
@@ -28,4 +29,3 @@ Derived metrics include OHLCV deltas, realised volatility surfaces, return entro
 Run all unit tests with:
 ```bash
 pytest -q
-```
