@@ -60,3 +60,9 @@ Run all unit tests with:
 ```bash
 pytest -q tests
 ```
+
+## Replit Deployment
+
+Launch the repository on Replit to automatically install dependencies and start the trading engine alongside the dashboard. When the repl loads, open the webview URL to monitor performance in real time.
+
+
