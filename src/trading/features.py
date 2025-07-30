@@ -54,6 +54,19 @@ class FeatureFabric:
         df["ma60"] = df["close"].rolling(60, min_periods=1).mean()
         for w in self.surf_windows:
             df[f"vol_{w}"] = df["return"].rolling(w, min_periods=1).std().fillna(0)
+        df["tr"] = np.maximum.reduce([
+            (df["high"] - df["low"]).abs(),
+            (df["high"] - df["close"].shift(1)).abs(),
+            (df["low"] - df["close"].shift(1)).abs(),
+        ])
+        df["atr"] = df["tr"].rolling(14, min_periods=1).mean()
+        df["trend_strength"] = (
+            (df["ma10"] - df["ma60"]).abs() / (df["atr"] + 1e-9)
+        ).rolling(5, min_periods=1).mean()
+        df["trend_strength"] = 1 / (1 + np.exp(-df["trend_strength"]))
+        vol_median = df["vol"].rolling(60, min_periods=1).median()
+        df["volatility_state"] = (df["vol"] / (vol_median + 1e-9)).clip(0, None)
+        df["volatility_state"] = 1 / (1 + np.exp(-(df["volatility_state"] - 1)))
         entropy_val = return_entropy(df["return"].dropna().values[-60:])
         hurst_val = hurst_exponent(df["close"].dropna())
         features = df.iloc[-1].to_dict()
@@ -72,4 +85,8 @@ class FeatureFabric:
         depth = float(tick.get("bestBidSize", 0)) + float(tick.get("bestAskSize", 0))
         features["depth_mid"] = ob_mid
         features["depth"] = depth
+        features["order_flow_bias"] = features["imbalance"]
+        features["last_move"] = features.get("d_close", 0.0)
+        features["trend_strength"] = float(df.iloc[-1]["trend_strength"])
+        features["volatility_state"] = float(df.iloc[-1]["volatility_state"])
         return features
